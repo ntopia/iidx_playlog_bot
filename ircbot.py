@@ -11,6 +11,7 @@ import irc.client
 from BufferingBot import BufferingBot, Message
 
 from iidx_util import *
+from config import *
 
 
 def getRedis():
@@ -54,11 +55,10 @@ def makeOnlyPlayLog( play_log ):
 
 class IIDXBot( BufferingBot ):
 	def __init__( self, target_chans ):
-		server = ( 'evans.uriirc.org', 16661 )
-		nickname = 'iidx_log'
-		BufferingBot.__init__( self, [server], nickname,
+		server = ( bot_irc_server, bot_irc_port )
+		BufferingBot.__init__( self, [server], bot_irc_nickname,
 			username = 'iidx_log_bot', realname = 'iidx_log_bot',
-			buffer_timeout = -1, use_ssl = True )
+			buffer_timeout = -1, use_ssl = bot_use_ssl )
 
 		self.target_chans = target_chans
 		self.connection.add_global_handler( 'welcome', self._on_connected )
@@ -110,7 +110,7 @@ class IIDXBot( BufferingBot ):
 def main():
 	logging.basicConfig( level = logging.INFO )
 
-	iidx_log_bot = IIDXBot( [ u'#rdm' ] )
+	iidx_log_bot = IIDXBot( bot_target_chans )
 	while True:
 		try:
 			iidx_log_bot.start()

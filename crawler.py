@@ -11,11 +11,7 @@ import redis
 import re
 
 from iidx_util import *
-
-
-eamu_id = 'your e-amu account id'
-eamu_pass = 'your e-amu account password'
-my_rival_id = 'your rival id'
+from config import *
 
 
 def getRedis():
