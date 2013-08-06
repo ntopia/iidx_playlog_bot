@@ -2,9 +2,13 @@ now running on
 
 python 2.7.3
 redis 2.2.12
-
 python packages
 - BeautifulSoup 3.2.1
 - httplib2 0.8
 - redis 2.7.6
+
+
+thanks to
+- https://github.com/quadr/JubeatCrawler
+- https://github.com/puzzlet/feedex
 
