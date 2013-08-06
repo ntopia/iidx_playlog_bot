@@ -1,0 +1,6 @@
+[submodule "BufferingBot"]
+	path = BufferingBot
+	url = https://github.com/puzzlet/BufferingBot.git
+[submodule "python-irc"]
+	path = python-irc
+	url = https://github.com/puzzlet/irc.git
