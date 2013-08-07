@@ -28,12 +28,12 @@ CLEAR_COLOR = [ u'', applyColor('00','14'), applyColor('00','06'), \
 	applyColor('01','09'), applyColor('00','10'), applyColor('00','04'), applyColor('01','08'), applyColor('00','02') ]
 
 
-def makeUpdateLog( play_log, difficulty ):
+def makeUpdateLog( play_log, difficulty, account ):
 	key = 'update_log.%d' % difficulty
 	if key not in play_log:
 		return None
 
-	out = u'[VVVVVV] \u0002%s\u000f %s%s \u0002|\u000f ' % ( play_log['title'], PLAYSIDE_STR[play_log['play_side']], DIFFICULTY_STR[difficulty] )
+	out = u'[%s] \u0002%s\u000f %s%s \u0002|\u000f ' % ( account['djname'], play_log['title'], PLAYSIDE_STR[play_log['play_side']], DIFFICULTY_STR[difficulty] )
 
 	history_b = play_log[key][0]
 	history_a = play_log[key][1]
@@ -48,8 +48,8 @@ def makeUpdateLog( play_log, difficulty ):
 
 	return out
 
-def makeOnlyPlayLog( play_log ):
-	out = u'[VVVVVV] \u0002%s\u000f 을(를) 플레이했지만 아무일도 일어나지 않았다!' % play_log['title']
+def makeOnlyPlayLog( play_log, account ):
+	out = u'[%s] \u0002%s\u000f 을(를) 플레이했지만 아무일도 일어나지 않았다!' % ( account['djname'], play_log['title'] )
 	return out
 
 
@@ -75,11 +75,12 @@ class IIDXBot( BufferingBot ):
 		played_log_json = r.lpop( PLAY_LOG_KEY )
 		while played_log_json is not None:
 			played_log = json.loads( played_log_json )
+			account = json.loads( r.hget( 'accounts', played_log['rival_id'] ) )
 
 			for chan in self.target_chans:
 				pushed = False
 				for difficulty in xrange(DIFFICULTY_MAX):
-					out = makeUpdateLog( played_log, difficulty )
+					out = makeUpdateLog( played_log, difficulty, account )
 					if out is None:
 						continue
 					message = Message( 'privmsg', ( chan, out ), timestamp = time.time() )
@@ -87,7 +88,7 @@ class IIDXBot( BufferingBot ):
 					pushed = True
 
 				if not pushed:
-					out = makeOnlyPlayLog( played_log )
+					out = makeOnlyPlayLog( played_log, account )
 					message = Message( 'privmsg', ( chan, out ), timestamp = time.time() )
 					self.push_message( message )
 

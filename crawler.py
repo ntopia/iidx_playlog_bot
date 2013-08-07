@@ -1,5 +1,6 @@
 
 import logging
+import sys
 import json
 import httplib2
 import urllib
@@ -40,6 +41,13 @@ def login( kid, password ):
 	except Exception, e:
 		logging.error( 'login : %s'%e )
 		return False, ''
+
+
+def logout( cookie ):
+	try:
+		getHttpContents( 'https://p.eagate.573.jp/gate/p/logout.html', cookie )
+	except Exception, e:
+		logging.error( 'logout : %s'%e )
 
 
 def getHttpContents( url, cookie ):
@@ -112,12 +120,14 @@ def crawlRecentInfo( page_idx, cookie ):
 		return None
 
 
-def doUpdateRecent():
+def doUpdateRecent( rival_id ):
 	try:
 		r = getRedis()
-		data_key = my_rival_id
 
-		res, cookie = login( eamu_id, eamu_pass )
+		# get account info
+		account = json.loads( r.hget( 'accounts', rival_id ) )
+		data_key = account[ 'rival_id' ]
+		res, cookie = login( account[ 'eamu_id' ], account[ 'eamu_pass' ] )
 		if not res:
 			return
 
@@ -165,13 +175,15 @@ def doUpdateRecent():
 		return
 
 
-def doUpdateAll():
+def doUpdateAll( rival_id ):
 	song_count = [ 168, 104, 79, 90, 170, 48, 112 ]
 	try:
 		r = getRedis()
-		data_key = my_rival_id
 
-		res, cookie = login( eamu_id, eamu_pass )
+		# get account info
+		account = json.loads( r.hget( 'accounts', rival_id ) )
+		data_key = account[ 'rival_id' ]
+		res, cookie = login( account[ 'eamu_id' ], account[ 'eamu_pass' ] )
 		if not res:
 			return
 
@@ -204,5 +216,43 @@ def doUpdateAll():
 		return
 
 
-doUpdateRecent()
-#doUpdateAll()
+def addAccount( rival_id, eamu_id, eamu_pass, djname ):
+	try:
+		r = getRedis()
+
+		account_info = {}
+		account_info[ 'rival_id' ] = rival_id
+		account_info[ 'eamu_id'] = eamu_id
+		account_info[ 'eamu_pass'] = eamu_pass
+		account_info[ 'djname' ] = djname
+
+		r.hset( 'accounts', rival_id, json.dumps(account_info) )
+
+	except Exception, e:
+		logging.error( 'addAccount : %s'%e )
+		return
+
+
+def doMainJob():
+	try:
+		r = getRedis()
+		user_list = r.hkeys( 'accounts' )
+		for user in user_list:
+			doUpdateRecent( user )
+
+	except Exception, e:
+		logging.error( 'doMainJob : %s'%e )
+		return
+
+
+
+if len( sys.argv ) > 1:
+	cmd = sys.argv[1]
+	if cmd == 'add_account':
+		addAccount( 'your rival id', 'your eamu id', 'your eamu pass', 'your dj name' )
+	elif cmd == 'crawl_all':
+		doUpdateAll( 'your rival id' )
+
+else:
+	doMainJob()
+
