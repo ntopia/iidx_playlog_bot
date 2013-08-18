@@ -28,12 +28,16 @@ CLEAR_COLOR = [ u'', applyColor('00','14'), applyColor('00','06'), \
 	applyColor('01','09'), applyColor('00','10'), applyColor('00','04'), applyColor('01','08'), applyColor('00','02') ]
 
 
-def makeUpdateLog( play_log, difficulty, account ):
+def makeUpdateLog( play_log, difficulty, account, music_info ):
 	key = 'update_log.%d' % difficulty
 	if key not in play_log:
 		return None
 
-	out = u'[%s] \u0002%s\u000f %s%s \u0002|\u000f ' % ( account['djname'], play_log['title'], PLAYSIDE_STR[play_log['play_side']], DIFFICULTY_STR[difficulty] )
+	lv_str = ''
+	if music_info is not None:
+		lv_str = '(lv.%d)' % music_info['lv'][difficulty]
+
+	out = u'[%s] \u0002%s\u000f %s%s%s \u0002|\u000f ' % ( account['djname'], play_log['title'], PLAYSIDE_STR[play_log['play_side']], DIFFICULTY_STR[difficulty], lv_str )
 
 	history_b = play_log[key][0]
 	history_a = play_log[key][1]
@@ -48,7 +52,7 @@ def makeUpdateLog( play_log, difficulty, account ):
 
 	return out
 
-def makeOnlyPlayLog( play_log, account ):
+def makeOnlyPlayLog( play_log, account, music_info ):
 	out = u'[%s] \u0002%s\u000f 을(를) 플레이했지만 아무일도 일어나지 않았다!' % ( account['djname'], play_log['title'] )
 	return out
 
@@ -72,15 +76,19 @@ class IIDXBot( BufferingBot ):
 		logging.info( 'iterating...%d' % int(time.time()) )
 
 		r = getRedis()
-		played_log_json = r.lpop( PLAY_LOG_KEY )
-		while played_log_json is not None:
-			played_log = json.loads( played_log_json )
-			account = json.loads( r.hget( 'accounts', played_log['rival_id'] ) )
+		play_log_json = r.lpop( PLAY_LOG_KEY )
+		while play_log_json is not None:
+			play_log = json.loads( play_log_json )
+			account = json.loads( r.hget( 'accounts', play_log['rival_id'] ) )
+
+			music_info = None
+			if r.hexists( 'music_info', play_log['title'] ):
+				music_info = json.loads( r.hget( 'music_info', play_log['title'] ) )
 
 			for chan in self.target_chans:
 				pushed = False
 				for difficulty in xrange(DIFFICULTY_MAX):
-					out = makeUpdateLog( played_log, difficulty, account )
+					out = makeUpdateLog( play_log, difficulty, account, music_info )
 					if out is None:
 						continue
 					message = Message( 'privmsg', ( chan, out ), timestamp = time.time() )
@@ -88,7 +96,7 @@ class IIDXBot( BufferingBot ):
 					pushed = True
 
 				if not pushed:
-					out = makeOnlyPlayLog( played_log, account )
+					out = makeOnlyPlayLog( play_log, account, music_info )
 					message = Message( 'privmsg', ( chan, out ), timestamp = time.time() )
 					self.push_message( message )
 
