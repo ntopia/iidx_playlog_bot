@@ -59,16 +59,24 @@ def crawlMusicInfo():
 			tds = row.find_all( 'td' )
 
 			title = tds[0].contents[1]
-
 			lv_n = int(tds[4].string) if tds[4].string != '-' else 0
 			lv_h = int(tds[5].string) if tds[5].string != '-' else 0
 			lv_a = int(tds[6].string) if tds[6].string != '-' else 0
 
 			data = { 'title': title, 'lv': [ lv_n, lv_h, lv_a ] }
-
 			r.hset( 'music_info', title, json.dumps( data ) )
 
-			print( json.dumps( data ) )
+		res = c.find_all( 'tr', 'back1' )
+		for row in res:
+			tds = row.find_all( 'td' )
+
+			title = tds[0].contents[1]
+			lv_n = int(tds[4].string) if tds[4].string != '-' else 0
+			lv_h = int(tds[5].string) if tds[5].string != '-' else 0
+			lv_a = int(tds[6].string) if tds[6].string != '-' else 0
+
+			data = { 'title': title, 'lv': [ lv_n, lv_h, lv_a ] }
+			r.hset( 'music_info', title, json.dumps( data ) )
 
 	except Exception, e:
 		logging.error( 'crawlMusicInfo : %s'%e )

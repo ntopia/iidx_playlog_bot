@@ -100,7 +100,7 @@ class IIDXBot( BufferingBot ):
 					message = Message( 'privmsg', ( chan, out ), timestamp = time.time() )
 					self.push_message( message )
 
-			played_log_json = r.lpop( PLAY_LOG_KEY )
+			play_log_json = r.lpop( PLAY_LOG_KEY )
 
 		self.ircobj.execute_delayed( 37, self._iter_func )
 
