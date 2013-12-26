@@ -72,11 +72,11 @@ def getHttpContents( url, cookie ):
 
 def crawlRecentInfo( page_idx, cookie ):
 	try:
-		c = getHttpContents( 'http://p.eagate.573.jp/game/2dx/20/p/djdata/music_info.html?index=%d'%page_idx, cookie )
+		c = getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/music_info.html?index=%d'%page_idx, cookie )
 		if c is None:
 			return None
 
-		music_title = c.find( name='td', attrs={ 'class': 'music_info_td' } ).contents[0].strip()
+		music_title = c.find( name='div', attrs={ 'class': 'music_info_td' } ).contents[0].strip()
 
 		play_count_str_sp = c.find( name='div', attrs={ 'class': 'musi_info_title_box' } ).find( 'p' ).string
 		play_count_sp = int( re.search( '[0-9]+', play_count_str_sp ).group() )
@@ -87,29 +87,30 @@ def crawlRecentInfo( page_idx, cookie ):
 					'data': [ HISTORY_PROTOTYPE.copy() for _ in xrange(PLAYSIDE_MAX*DIFFICULTY_MAX) ] }
 
 		# crawl SP data only (in temp)
-		score_table = c.find( name='table', attrs={ 'class': 'table_type_minfo' } )
-		rows = score_table.findAll( 'tr' )
+		score_table = c.find( name='div', attrs={ 'id': 'sp_table' } )
+		rows = score_table.findAll( name='div', attrs={ 'class': 'clear_info' } )
 		row_num = 1
 		for row in rows:
-			cols = row.findAll( 'td' )
+			cols = row.findAll( name='div', attrs={ 'class': 'clear_cel' } )
 			if len(cols) == 0:
 				continue
 
 			for k in xrange(DIFFICULTY_MAX):
 				if row_num == 1:
-					val = cols[k].img['alt']
-					result['data'][k]['clear'] = CLEAR_STR_TO_NUM[val]
+					val = cols[k].img['src']
+					result['data'][k]['clear'] = CLEARIMG_SRC_TO_NUM[val]
 				elif row_num == 2:
 					val = 'F' if cols[k].find( 'img' ) == None else cols[k].find( 'img' )['alt']
 					result['data'][k]['grade'] = GRADE_STR_TO_NUM[val]
 				elif row_num == 3:
-					val = cols[k].string[ : cols[k].string.find('(') ]
+					val = cols[k].contents[2]
+					val = val[ : val.find('(') ]
 					try:
 						result['data'][k]['score'] = int(val)
 					except ValueError:
 						result['data'][k]['score'] = 0
 				else:
-					val = cols[k].string
+					val = cols[k].contents[2]
 					# we doesn't crawl the miss count
 			row_num = row_num + 1
 
@@ -131,7 +132,7 @@ def doUpdateRecent( rival_id ):
 		if not res:
 			return
 
-		getHttpContents( 'http://p.eagate.573.jp/game/2dx/20/p/djdata/music_recently.html?s=4', cookie )
+		getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/music_recent.html', cookie )
 
 		for i in xrange( 4, -1, -1 ):
 			info = crawlRecentInfo( i, cookie )
@@ -176,7 +177,7 @@ def doUpdateRecent( rival_id ):
 
 
 def doUpdateAll( rival_id ):
-	song_count = [ 168, 104, 79, 90, 170, 48, 112 ]
+	song_count = [ 175, 112, 81, 100, 176, 54, 117 ]
 	try:
 		r = getRedis()
 
@@ -189,7 +190,7 @@ def doUpdateAll( rival_id ):
 
 		for song_ct in xrange(len(song_count)):
 			print( 'ct:%d' % song_ct )
-			getHttpContents( 'http://p.eagate.573.jp/game/2dx/20/p/djdata/music.html?s=2&list=%d'%song_ct, cookie )
+			getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/music_title.html?s=1&list=%d'%song_ct, cookie )
 
 			for i in xrange( song_count[song_ct] ):
 				info = crawlRecentInfo( i, cookie )
@@ -248,10 +249,10 @@ def doMainJob():
 
 if len( sys.argv ) > 1:
 	cmd = sys.argv[1]
-	if cmd == 'add_account':
-		addAccount( 'your rival id', 'your eamu id', 'your eamu pass', 'your dj name' )
-	elif cmd == 'crawl_all':
-		doUpdateAll( 'your rival id' )
+#	if cmd == 'add_account':
+#		addAccount( 'your iidx id', 'your eamu id', 'your eamu pass', 'your dj name' )
+#	if cmd == 'crawl_all':
+#		doUpdateAll( 'your iidx id' )
 
 else:
 	doMainJob()

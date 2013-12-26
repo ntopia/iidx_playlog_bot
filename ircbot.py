@@ -14,8 +14,8 @@ from iidx_util import *
 from config import *
 
 
-def getRedis():
-	return redis.Redis( db=9 )
+def getRedis(db_num=9):
+	return redis.Redis( db=db_num )
 
 
 def applyColor( foreground, background = None ):
@@ -43,8 +43,8 @@ def makeUpdateLog( play_log, difficulty, account, music_info ):
 	history_a = play_log[key][1]
 
 	if history_b['clear'] < history_a['clear']:
-		out += u'%s%s\u000f -> ' % ( CLEAR_COLOR[ history_b['clear'] ], CLEAR_STR[ history_b['clear'] ] )
-	out += u'%s%s\u000f \u0002|\u000f ' % ( CLEAR_COLOR[ history_a['clear'] ], CLEAR_STR[ history_a['clear'] ] )
+		out += u'%s%s\u000f -> ' % ( CLEAR_COLOR[ history_b['clear'] ], CLEAR_SHORTSTR[ history_b['clear'] ] )
+	out += u'%s%s\u000f \u0002|\u000f ' % ( CLEAR_COLOR[ history_a['clear'] ], CLEAR_SHORTSTR[ history_a['clear'] ] )
 
 	if history_b['score'] < history_a['score']:
 		out += u'%d/%s -> ' % ( history_b['score'], GRADE_STR[ history_b['grade'] ] )
