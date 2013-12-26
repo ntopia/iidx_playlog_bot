@@ -177,7 +177,7 @@ def doUpdateRecent( rival_id ):
 
 
 def doUpdateAll( rival_id ):
-	song_count = [ 175, 112, 81, 100, 176, 54, 117 ]
+	song_count = [ 175, 113, 81, 102, 177, 54, 119 ]
 	try:
 		r = getRedis()
 
