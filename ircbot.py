@@ -28,10 +28,8 @@ CLEAR_COLOR = [ u'', applyColor('00','14'), applyColor('00','06'), \
 	applyColor('01','09'), applyColor('00','10'), applyColor('00','04'), applyColor('01','08'), applyColor('00','02') ]
 
 
-def makeUpdateLog( play_log, difficulty, account, music_info ):
-	key = 'update_log.%d' % difficulty
-	if key not in play_log:
-		return None
+def makeUpdateLog( play_log, account, music_info ):
+	difficulty = play_log['difficulty']
 
 	lv_str = ''
 	if music_info is not None:
@@ -39,8 +37,8 @@ def makeUpdateLog( play_log, difficulty, account, music_info ):
 
 	out = u'[%s] \u0002%s\u000f %s%s%s \u0002|\u000f ' % ( account['djname'], play_log['title'], PLAYSIDE_STR[play_log['play_side']], DIFFICULTY_STR[difficulty], lv_str )
 
-	history_b = play_log[key][0]
-	history_a = play_log[key][1]
+	history_b = play_log['before']
+	history_a = play_log['after']
 
 	if history_b['clear'] < history_a['clear']:
 		out += u'%s%s\u000f -> ' % ( CLEAR_COLOR[ history_b['clear'] ], CLEAR_SHORTSTR[ history_b['clear'] ] )
@@ -48,7 +46,14 @@ def makeUpdateLog( play_log, difficulty, account, music_info ):
 
 	if history_b['score'] < history_a['score']:
 		out += u'%d/%s -> ' % ( history_b['score'], GRADE_STR[ history_b['grade'] ] )
-	out += u'\u0002%d/%s\u000f' % ( history_a['score'], GRADE_STR[ history_a['grade'] ] )
+	out += u'\u0002%d/%s\u000f \u0002|\u000f ' % ( history_a['score'], GRADE_STR[ history_a['grade'] ] )
+
+	bp_str_b = 'X' if history_b['bp'] == BP_INF else str(history_b['bp'])
+	bp_str_a = 'X' if history_a['bp'] == BP_INF else str(history_a['bp'])
+	out += u'bp:'
+	if history_b['bp'] > history_a['bp']:
+		out += u'%s->' % bp_str_b
+	out += u'\u0002%s\u000f' % bp_str_a
 
 	return out
 
@@ -85,20 +90,13 @@ class IIDXBot( BufferingBot ):
 			if r.hexists( 'music_info', play_log['title'] ):
 				music_info = json.loads( r.hget( 'music_info', play_log['title'] ) )
 
-			for chan in self.target_chans:
-				pushed = False
-				for difficulty in xrange(DIFFICULTY_MAX):
-					out = makeUpdateLog( play_log, difficulty, account, music_info )
-					if out is None:
-						continue
-					message = Message( 'privmsg', ( chan, out ), timestamp = time.time() )
-					self.push_message( message )
-					pushed = True
+			out = makeUpdateLog( play_log, account, music_info )
+			if out is None:
+				continue
 
-				if not pushed:
-					out = makeOnlyPlayLog( play_log, account, music_info )
-					message = Message( 'privmsg', ( chan, out ), timestamp = time.time() )
-					self.push_message( message )
+			for chan in self.target_chans:
+				message = Message( 'privmsg', ( chan, out ), timestamp = time.time() )
+				self.push_message( message )
 
 			play_log_json = r.lpop( PLAY_LOG_KEY )
 
