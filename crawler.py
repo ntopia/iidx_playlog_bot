@@ -70,25 +70,20 @@ def getHttpContents( url, cookie ):
 		return None
 
 
-def crawlRecentInfo( page_idx, cookie ):
+def crawlRecentInfo( rival_base64, page_idx, cookie ):
 	try:
-		c = getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/music_info.html?index=%d'%page_idx, cookie )
+		c = getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/compare_rival.html?index=%d&rival=%s'%(page_idx,rival_base64), cookie )
 		if c is None:
 			return None
 
 		music_title = c.find( name='div', attrs={ 'class': 'music_info_td' } ).contents[0].strip()
 
-		play_count_str_sp = c.find( name='div', attrs={ 'class': 'musi_info_title_box' } ).find( 'p' ).string
-		play_count_sp = int( re.search( '[0-9]+', play_count_str_sp ).group() )
-		play_count_dp = 0
-
 		result = {	'title': music_title,
-					'play_count': [ play_count_sp, play_count_dp ],
 					'data': [ HISTORY_PROTOTYPE.copy() for _ in xrange(PLAYSIDE_MAX*DIFFICULTY_MAX) ] }
 
 		# crawl SP data only (in temp)
 		score_table = c.find( name='div', attrs={ 'id': 'sp_table' } )
-		rows = score_table.findAll( name='div', attrs={ 'class': 'clear_info' } )
+		rows = score_table.findAll( name='div', attrs={ 'class': 'clear_info' } )[1::2]
 		row_num = 1
 		for row in rows:
 			cols = row.findAll( name='div', attrs={ 'class': 'clear_cel' } )
@@ -111,7 +106,10 @@ def crawlRecentInfo( page_idx, cookie ):
 						result['data'][k]['score'] = 0
 				else:
 					val = cols[k].contents[2]
-					# we doesn't crawl the miss count
+					try:
+						result['data'][k]['bp'] = int(val)
+					except ValueError:
+						result['data'][k]['bp'] = BP_INF
 			row_num = row_num + 1
 
 		return result
@@ -125,51 +123,39 @@ def doUpdateRecent( rival_id ):
 	try:
 		r = getRedis()
 
-		# get account info
 		account = json.loads( r.hget( 'accounts', rival_id ) )
 		data_key = account[ 'rival_id' ]
-		res, cookie = login( account[ 'eamu_id' ], account[ 'eamu_pass' ] )
+		res, cookie = login( crawl_eamu_id, crawl_eamu_pass )
 		if not res:
 			return
 
-		getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/music_recent.html', cookie )
+		getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/music_recent_another.html?rival=%s'%account['rival_base64'], cookie )
 
 		for i in xrange( 4, -1, -1 ):
-			info = crawlRecentInfo( i, cookie )
+			info = crawlRecentInfo( account['rival_base64'], i, cookie )
 			if info == None:
 				continue
 
 			for play_side in xrange(1):	# fixed on SP (in temp)
-				# PLAY COUNT updating ---------------------------------
-				field_pc = fieldPlaycount(play_side, info['title'])
-				play_count_before = int(r.hget(data_key, field_pc)) if r.hexists(data_key, field_pc) else 0
-				play_count_after = info['play_count'][play_side]
-				if play_count_after > 0:
-					r.hset( data_key, field_pc, play_count_after )
-
 				# HISTORY updating ---------------------------------
-				updated_res = [ None for _ in xrange(DIFFICULTY_MAX) ]
 				for difficulty in xrange(DIFFICULTY_MAX):
 					field_hs = fieldHistory(play_side, difficulty, info['title'])
 					history_before = json.loads(r.hget(data_key, field_hs)) if r.hexists(data_key, field_hs) else HISTORY_PROTOTYPE.copy()
 					history_after = info['data'][ play_side*DIFFICULTY_MAX + difficulty ]
 					if isHistoryUpgraded( history_before, history_after ):
 						r.hset( data_key, field_hs, json.dumps(history_after) )
-						updated_res[difficulty] = [ history_before, history_after ]
 
-				# pushing a play log ---------------------------------
-				if play_count_before < play_count_after:
-					play_log = {}
-					play_log['rival_id'] = data_key
-					play_log['timestamp'] = int(time.time())
-					play_log['play_side'] = play_side
-					play_log['title'] = info['title']
-					play_log['play_count'] = [ play_count_before, play_count_after ]
-					for difficulty in xrange(DIFFICULTY_MAX):
-						if updated_res[difficulty] is not None:
-							play_log['update_log.%d'%difficulty] = updated_res[difficulty]
+						# pushing a play log ---------------------------------
+						play_log = {}
+						play_log['rival_id'] = data_key
+						play_log['timestamp'] = int(time.time())
+						play_log['play_side'] = play_side
+						play_log['title'] = info['title']
+						play_log['difficulty'] = difficulty
+						play_log['before'] = history_before
+						play_log['after'] = history_after
 
-					r.rpush( PLAY_LOG_KEY, json.dumps(play_log) )
+						r.rpush( PLAY_LOG_KEY, json.dumps(play_log) )
 
 	except Exception, e:
 		logging.error( 'doUpdateRecent : %s'%e )
@@ -177,33 +163,31 @@ def doUpdateRecent( rival_id ):
 
 
 def doUpdateAll( rival_id ):
-	song_count = [ 175, 113, 81, 102, 177, 54, 119 ]
 	try:
 		r = getRedis()
 
-		# get account info
+		if not r.hexists( 'accounts', rival_id ):
+			print( 'accounts doesnt exists!' )
+			return
+
 		account = json.loads( r.hget( 'accounts', rival_id ) )
 		data_key = account[ 'rival_id' ]
-		res, cookie = login( account[ 'eamu_id' ], account[ 'eamu_pass' ] )
+		r.delete( data_key )
+		res, cookie = login( crawl_eamu_id, crawl_eamu_pass )
 		if not res:
 			return
 
-		for song_ct in xrange(len(song_count)):
-			print( 'ct:%d' % song_ct )
-			getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/music_title.html?s=1&list=%d'%song_ct, cookie )
+		for group_num in xrange(len(SONG_COUNT_BY_TITLE)):
+			print( 'group %d'%group_num )
+			getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/music_title.html?s=1&list=%d&rival=%s'%(group_num,account['rival_base64']), cookie )
 
-			for i in xrange( song_count[song_ct] ):
-				info = crawlRecentInfo( i, cookie )
+			for i in xrange( SONG_COUNT_BY_TITLE[group_num] ):
+				info = crawlRecentInfo( account['rival_base64'], i, cookie )
 				if info == None:
+					print( 'crawl failed.. %d'%i )
 					continue
 
 				for play_side in xrange(1):	# fixed on SP (in temp)
-					# PLAY COUNT updating ---------------------------------
-					field_pc = fieldPlaycount(play_side, info['title'])
-					play_count_after = info['play_count'][play_side]
-					if play_count_after > 0:
-						r.hset( data_key, field_pc, play_count_after )
-
 					# HISTORY updating ---------------------------------
 					for difficulty in xrange(DIFFICULTY_MAX):
 						field_hs = fieldHistory(play_side, difficulty, info['title'])
@@ -217,15 +201,14 @@ def doUpdateAll( rival_id ):
 		return
 
 
-def addAccount( rival_id, eamu_id, eamu_pass, djname ):
+def addAccount( rival_id, djname, rival_base64 ):
 	try:
 		r = getRedis()
 
 		account_info = {}
 		account_info[ 'rival_id' ] = rival_id
-		account_info[ 'eamu_id'] = eamu_id
-		account_info[ 'eamu_pass'] = eamu_pass
 		account_info[ 'djname' ] = djname
+		account_info[ 'rival_base64' ] = rival_base64
 
 		r.hset( 'accounts', rival_id, json.dumps(account_info) )
 
@@ -247,12 +230,22 @@ def doMainJob():
 
 
 
-if len( sys.argv ) > 1:
+if len(sys.argv) > 1:
 	cmd = sys.argv[1]
-#	if cmd == 'add_account':
-#		addAccount( 'your iidx id', 'your eamu id', 'your eamu pass', 'your dj name' )
-#	if cmd == 'crawl_all':
-#		doUpdateAll( 'your iidx id' )
+	if cmd == 'add_account':
+		if len(sys.argv) < 5:
+			print( 'BREAK!!')
+		else:
+			addAccount( sys.argv[2], sys.argv[3], sys.argv[4] )
+			print( 'account registered!' )
+	elif cmd == 'crawl_all':
+		if len(sys.argv) < 3:
+			print( 'BREAK!!' )
+		else:
+			doUpdateAll( sys.argv[2] )
+			print( 'all-updating completed!' )
+	else:
+		print( 'BREAK!!' )
 
 else:
 	doMainJob()
