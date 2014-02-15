@@ -19,54 +19,66 @@ def getRedis():
 	return redis.Redis( db=9 )
 
 
-def login( kid, password ):
+def requestEAMU( url, method, param={}, header={} ):
 	try:
 		http = httplib2.Http()
 
-		loginUrl = 'https://p.eagate.573.jp/gate/p/login.html'
-		loginHeader = { 'content-type' : 'application/x-www-form-urlencoded', 'Origin': 'https://p.eagate.573.jp', 'Referer': 'https://p.eagate.573.jp/gate/p/login.html', 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.72 Safari/537.36'  }
-		auth_info = { 'KID': kid, 'pass': password, 'OTP': '' }
+		param_encoded = urllib.urlencode( param )
+		result_header = {	'Content-Type': 'application/x-www-form-urlencoded',
+							'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.107 Safari/537.36' }
+		result_header.update( header )
 
-		params = urllib.urlencode( auth_info )
-		res, c = http.request( loginUrl, 'POST', params, headers=loginHeader )
-		if res.status == 302:
-			cookie = Cookie.SimpleCookie( res['set-cookie'] ).values()[0].OutputString( attrs=[] )
-			expires = Cookie.SimpleCookie( res['set-cookie'] ).values()[0]['expires']
-			expire_date = datetime.strptime( expires, '%a, %d-%b-%Y %H:%M:%S %Z' ) + timedelta( hours=9 )
-			return True, cookie
-		else:
-			logging.error( 'login : failed..' )
-			return False, ''
-
+		return http.request( url, method, param_encoded, result_header )
 	except Exception, e:
-		logging.error( 'login : %s'%e )
+		return None, None
+
+
+def login( kid, password ):
+	auth_info = { 'KID': kid, 'pass': password, 'OTP': '' }
+
+	res, c = requestEAMU( 'https://p.eagate.573.jp/gate/p/login.html', 'POST', auth_info, {} )
+	if res is None:
+		logging.error( 'login : failed..' )
+		return False, ''
+	if res.status == 302:
+		cookie = Cookie.SimpleCookie( res['set-cookie'] ).values()[0].OutputString( attrs=[] )
+		expires = Cookie.SimpleCookie( res['set-cookie'] ).values()[0]['expires']
+		expire_date = datetime.strptime( expires, '%a, %d-%b-%Y %H:%M:%S %Z' ) + timedelta( hours=9 )
+		return True, cookie
+	else:
+		logging.error( 'login : failed..' )
 		return False, ''
 
 
-def logout( cookie ):
+def getHttpContents( url, cookie, method='GET', param={} ):
+	res, c = requestEAMU( url, method, param, { 'Cookie': cookie } )
+	if res.status != 200:
+		logging.error( 'getHttpContents : %d %s'%( res.status, url ) )
+		return None
+	if 'location' in res and ( 'err' in res['location'] or 'REDIRECT' in res['location'] ):
+		logging.error( 'getHttpContents : %s'%url )
+		return None
+
+	return BeautifulSoup( c.decode('shift_jisx0213') )
+
+
+def crawlRivalString( rival_id, cookie ):
 	try:
-		getHttpContents( 'https://p.eagate.573.jp/gate/p/logout.html', cookie )
-	except Exception, e:
-		logging.error( 'logout : %s'%e )
-
-
-def getHttpContents( url, cookie ):
-	try:
-		http = httplib2.Http()
-		res, c = http.request( url, headers={ 'cookie': cookie } )
-
-		if res.status != 200:
-			logging.error( 'getHttpContents : %d %s'%( res.status, url ) )
+		rival_id_conv = rival_id.replace( '-', '' )
+		c = getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/rival/rival_search.html', cookie, 'POST', {'iidxid':rival_id_conv,'mode':1} )
+		if c is None:
 			return None
 
-		if 'err' in res['content-location'] or 'REDIRECT' in res['content-location']:
-			logging.error( 'getHttpContents : %s'%url )
-			return None
+		table = c.find( name='table', attrs={ 'class': 'table_style1' } )
+		target_row = table.findAll( 'tr' )[1]
+		target_url = target_row.findAll( 'td' )[1].a['href']
 
-		return BeautifulSoup( c.decode('shift_jisx0213') )
+		# /game/2dx/21/p/djdata/data_another.html?rival= ~~~~~~
+		rival_string = target_url[46:]
+		return rival_string
 
 	except Exception, e:
-		logging.error( 'getHttpContents : %s %s'%( url, e ) )
+		logging.error( 'crawlRivalString : %s %s'%( rival_id, e ) )
 		return None
 
 
