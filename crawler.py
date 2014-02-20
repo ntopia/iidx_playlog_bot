@@ -145,10 +145,15 @@ def doUpdateRecent( rival_id ):
 		if not res:
 			return
 
-		getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/music_recent_another.html?rival=%s'%account['rival_base64'], cookie )
+		rival_base64 = crawlRivalString( rival_id, cookie )
+		if not rival_base64:
+			logging.error( 'doUpdateRecent : failed to crawl rival_base64' )
+			return
+
+		getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/music_recent_another.html?rival=%s'%rival_base64, cookie )
 
 		for i in xrange( 4, -1, -1 ):
-			info = crawlRecentInfo( account['rival_base64'], i, cookie, rival_id == crawl_eamu_rival_id )
+			info = crawlRecentInfo( rival_base64, i, cookie, rival_id == crawl_eamu_rival_id )
 			if info == None:
 				continue
 
