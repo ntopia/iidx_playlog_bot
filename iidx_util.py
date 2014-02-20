@@ -34,8 +34,12 @@ BP_INF = 99999999
 HISTORY_PROTOTYPE = { 'clear': CLEAR_STR_TO_NUM['NO PLAY'], 'grade': GRADE_STR_TO_NUM['F'], 'score': 0, 'bp': BP_INF }
 def isHistoryUpgraded( before, after ):
 	for type in HISTORY_PROTOTYPE.iterkeys():
-		if before[ type ] < after[ type ]:
-			return True
+		if type == 'bp':
+			if before[ type ] > after[ type ]:
+				return True
+		else:
+			if before[ type ] < after[ type ]:
+				return True
 	return False
 
 SONG_COUNT_BY_TITLE = [ 175, 112, 80, 101, 179, 54, 120 ]
