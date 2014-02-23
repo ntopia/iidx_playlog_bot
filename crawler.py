@@ -227,10 +227,11 @@ def doUpdateAll( rival_id ):
 			return
 
 		for group_num in xrange(len(SONG_COUNT_BY_TITLE)):
-			print( 'group %d'%group_num )
+			print( 'group %d : %d songs'%(group_num, SONG_COUNT_BY_TITLE[group_num]) )
 			getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/music_title.html?s=1&list=%d&rival=%s'%(group_num,rival_base64), cookie )
 
 			for i in xrange( SONG_COUNT_BY_TITLE[group_num] ):
+				print( i )
 				info = crawlRecentInfo( rival_base64, i, cookie, rival_id == crawl_eamu_rival_id )
 				if info == None:
 					print( 'crawl failed.. %d'%i )
