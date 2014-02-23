@@ -90,7 +90,12 @@ def crawlRecentInfo( rival_base64, page_idx, cookie, is_admin_data ):
 
 		music_title = c.find( name='div', attrs={ 'class': 'music_info_td' } ).contents[0].strip()
 
+		play_count_str_sp = ''#c.find( name='div', attrs={ 'class': 'musi_info_title_box' } ).find( 'p' ).string
+		play_count_sp = 0#int( re.search( '[0-9]+', play_count_str_sp ).group() )
+		play_count_dp = 0
+
 		result = {	'title': music_title,
+					'play_count': [ play_count_sp, play_count_dp ],
 					'data': [ HISTORY_PROTOTYPE.copy() for _ in xrange(PLAYSIDE_MAX*DIFFICULTY_MAX) ] }
 
 		# crawl SP data only (in temp)
@@ -158,7 +163,15 @@ def doUpdateRecent( rival_id ):
 				continue
 
 			for play_side in xrange(1):	# fixed on SP (in temp)
+				# PLAY COUNT updating ---------------------------------
+				field_pc = fieldPlaycount(play_side, info['title'])
+				play_count_before = int(r.hget(data_key, field_pc)) if r.hexists(data_key, field_pc) else 0
+				play_count_after = 0#info['play_count'][play_side]
+				if play_count_after > 0:
+					r.hset( data_key, field_pc, play_count_after )
+
 				# HISTORY updating ---------------------------------
+				pushed = False
 				for difficulty in xrange(DIFFICULTY_MAX):
 					field_hs = fieldHistory(play_side, difficulty, info['title'])
 					history_before = json.loads(r.hget(data_key, field_hs)) if r.hexists(data_key, field_hs) else HISTORY_PROTOTYPE.copy()
@@ -177,6 +190,16 @@ def doUpdateRecent( rival_id ):
 						play_log['after'] = history_after
 
 						r.rpush( PLAY_LOG_KEY, json.dumps(play_log) )
+						pushed = True
+
+				if not pushed and play_count_before < play_count_after:
+					play_log = {}
+					play_log['rival_id'] = data_key
+					play_log['timestamp'] = int(time.time())
+					play_log['play_side'] = play_side
+					play_log['title'] = info['title']
+
+					r.rpush( PLAY_LOG_KEY, json.dumps(play_log) )
 
 	except Exception, e:
 		logging.error( 'doUpdateRecent : %s'%e )

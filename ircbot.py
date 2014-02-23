@@ -29,6 +29,9 @@ CLEAR_COLOR = [ u'', applyColor('00','14'), applyColor('00','06'), \
 
 
 def makeUpdateLog( play_log, account, music_info ):
+	if not 'difficulty' in play_log:
+		return makeOnlyPlayLog( play_log, account, music_info )
+
 	difficulty = play_log['difficulty']
 
 	lv_str = ''
