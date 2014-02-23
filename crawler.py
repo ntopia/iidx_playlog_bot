@@ -221,12 +221,17 @@ def doUpdateAll( rival_id ):
 		if not res:
 			return
 
+		rival_base64 = crawlRivalString( rival_id, cookie )
+		if not rival_base64:
+			logging.error( 'doUpdateRecent : failed to crawl rival_base64' )
+			return
+
 		for group_num in xrange(len(SONG_COUNT_BY_TITLE)):
 			print( 'group %d'%group_num )
-			getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/music_title.html?s=1&list=%d&rival=%s'%(group_num,account['rival_base64']), cookie )
+			getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/music_title.html?s=1&list=%d&rival=%s'%(group_num,rival_base64), cookie )
 
 			for i in xrange( SONG_COUNT_BY_TITLE[group_num] ):
-				info = crawlRecentInfo( account['rival_base64'], i, cookie, rival_id == crawl_eamu_rival_id )
+				info = crawlRecentInfo( rival_base64, i, cookie, rival_id == crawl_eamu_rival_id )
 				if info == None:
 					print( 'crawl failed.. %d'%i )
 					continue
