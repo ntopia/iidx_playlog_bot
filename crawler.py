@@ -250,14 +250,13 @@ def doUpdateAll( rival_id ):
 		return
 
 
-def addAccount( rival_id, djname, rival_base64 ):
+def addAccount( rival_id, djname ):
 	try:
 		r = getRedis()
 
 		account_info = {}
 		account_info[ 'rival_id' ] = rival_id
 		account_info[ 'djname' ] = djname
-		account_info[ 'rival_base64' ] = rival_base64
 
 		r.hset( 'accounts', rival_id, json.dumps(account_info) )
 
@@ -282,10 +281,10 @@ def doMainJob():
 if len(sys.argv) > 1:
 	cmd = sys.argv[1]
 	if cmd == 'add_account':
-		if len(sys.argv) < 5:
+		if len(sys.argv) < 4:
 			print( 'BREAK!!')
 		else:
-			addAccount( sys.argv[2], sys.argv[3], sys.argv[4] )
+			addAccount( sys.argv[2], sys.argv[3] )
 			print( 'account registered!' )
 	elif cmd == 'crawl_all':
 		if len(sys.argv) < 3:
