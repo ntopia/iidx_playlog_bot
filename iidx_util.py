@@ -10,6 +10,15 @@ CLEAR_SHORTSTR = [ 'NP', 'FAIL', 'AC', 'EC', 'CL', 'HC', 'EX', 'FC' ]
 CLEAR_STR_TO_NUM = { CLEAR_STR[x]: x for x in xrange(len(CLEAR_STR)) }
 
 CLEARIMG_SRC_TO_NUM = {
+	'/game/2dx/20/p/images/score_icon/clflg0.gif': 0,
+	'/game/2dx/20/p/images/score_icon/clflg1.gif': 1,
+	'/game/2dx/20/p/images/score_icon/clflg2.gif': 2,
+	'/game/2dx/20/p/images/score_icon/clflg3.gif': 3,
+	'/game/2dx/20/p/images/score_icon/clflg4.gif': 4,
+	'/game/2dx/20/p/images/score_icon/clflg5.gif': 5,
+	'/game/2dx/20/p/images/score_icon/clflg6.gif': 6,
+	'/game/2dx/20/p/images/score_icon/clflg7.gif': 7,
+
 	'/game/2dx/21/p/images/score_icon/clflg0.gif': 0,
 	'/game/2dx/21/p/images/score_icon/clflg1.gif': 1,
 	'/game/2dx/21/p/images/score_icon/clflg2.gif': 2,
