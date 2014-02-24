@@ -155,11 +155,15 @@ def doUpdateRecent( rival_id ):
 			logging.error( 'doUpdateRecent : failed to crawl rival_base64' )
 			return
 
-		getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/music_recent_another.html?rival=%s'%rival_base64, cookie )
+		c = getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/music_recent_another.html?rival=%s'%rival_base64, cookie )
+		if c is None:
+			logging.error( 'doUpdateRecent : failed to update' )
+			return
 
 		for i in xrange( 4, -1, -1 ):
 			info = crawlRecentInfo( rival_base64, i, cookie, rival_id == crawl_eamu_rival_id )
 			if info == None:
+				logging.error( 'recent crawl failed.. %d'%i )
 				continue
 
 			for play_side in xrange(1):	# fixed on SP (in temp)
@@ -211,7 +215,7 @@ def doUpdateAll( rival_id ):
 		r = getRedis()
 
 		if not r.hexists( 'accounts', rival_id ):
-			print( 'accounts doesnt exists!' )
+			logging.error( 'accounts doesnt exists!' )
 			return
 
 		account = json.loads( r.hget( 'accounts', rival_id ) )
@@ -227,14 +231,16 @@ def doUpdateAll( rival_id ):
 			return
 
 		for group_num in xrange(len(SONG_COUNT_BY_TITLE)):
-			print( 'group %d : %d songs'%(group_num, SONG_COUNT_BY_TITLE[group_num]) )
-			getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/music_title.html?s=1&list=%d&rival=%s'%(group_num,rival_base64), cookie )
+			logging.info( 'group %d : %d songs'%(group_num, SONG_COUNT_BY_TITLE[group_num]) )
+			c = getHttpContents( 'http://p.eagate.573.jp/game/2dx/21/p/djdata/music_title.html?s=1&list=%d&rival=%s'%(group_num,rival_base64), cookie )
+			if c is None:
+				logging.error( 'crawl failed.. %d'%group_num )
+				continue
 
 			for i in xrange( SONG_COUNT_BY_TITLE[group_num] ):
-				print( i )
 				info = crawlRecentInfo( rival_base64, i, cookie, rival_id == crawl_eamu_rival_id )
 				if info == None:
-					print( 'crawl failed.. %d'%i )
+					logging.error( 'crawl failed.. %d.%d'%(group_num,i) )
 					continue
 
 				for play_side in xrange(1):	# fixed on SP (in temp)
@@ -268,34 +274,46 @@ def addAccount( rival_id, djname ):
 
 def doMainJob():
 	try:
+		logging.info( 'start doMainJob!' )
+
 		r = getRedis()
 		user_list = r.hkeys( 'accounts' )
 		for user in user_list:
+			logging.info( 'start crawl user ' + user )
 			doUpdateRecent( user )
+
+		logging.info( 'end doMainJob!' )
 
 	except Exception, e:
 		logging.error( 'doMainJob : %s'%e )
 		return
 
 
+def main():
+	if len(sys.argv) > 1:
+		logging.basicConfig( stream=sys.stdout, level=logging.INFO, format='%(asctime)s] %(levelname)s] %(message)s' )
 
-if len(sys.argv) > 1:
-	cmd = sys.argv[1]
-	if cmd == 'add_account':
-		if len(sys.argv) < 4:
-			print( 'BREAK!!')
+		cmd = sys.argv[1]
+		if cmd == 'add_account':
+			if len(sys.argv) < 4:
+				print( 'BREAK!!')
+			else:
+				addAccount( sys.argv[2], sys.argv[3] )
+				print( 'account registered!' )
+		elif cmd == 'crawl_all':
+			if len(sys.argv) < 3:
+				print( 'BREAK!!' )
+			else:
+				doUpdateAll( sys.argv[2] )
+				print( 'all-updating completed!' )
 		else:
-			addAccount( sys.argv[2], sys.argv[3] )
-			print( 'account registered!' )
-	elif cmd == 'crawl_all':
-		if len(sys.argv) < 3:
 			print( 'BREAK!!' )
-		else:
-			doUpdateAll( sys.argv[2] )
-			print( 'all-updating completed!' )
+	
 	else:
-		print( 'BREAK!!' )
+		logging.basicConfig( filename='log', level=logging.INFO, format='%(asctime)s] %(levelname)s] %(message)s' )
 
-else:
-	doMainJob()
+		doMainJob()
 
+
+if __name__ == '__main__':
+	main()

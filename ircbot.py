@@ -81,7 +81,7 @@ class IIDXBot( BufferingBot ):
 		self.ircobj.execute_delayed( 2, self._iter_func )
 
 	def _iter_func( self ):
-		logging.info( 'iterating...%d' % int(time.time()) )
+	#	logging.info( 'iterating...%d' % int(time.time()) )
 
 		r = getRedis()
 		play_log_json = r.lpop( PLAY_LOG_KEY )
@@ -118,7 +118,7 @@ class IIDXBot( BufferingBot ):
 
 
 def main():
-	logging.basicConfig( level = logging.INFO )
+	logging.basicConfig( stream=sys.stdout, level=logging.INFO, format='%(asctime)s] %(levelname)s:%(message)s' )
 
 	iidx_log_bot = IIDXBot( bot_target_chans )
 	while True:
