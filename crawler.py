@@ -238,6 +238,7 @@ def doUpdateAll( rival_id ):
 				continue
 
 			for i in xrange( SONG_COUNT_BY_TITLE[group_num] ):
+				logging.info( '%d/%d (in group %d)'%(i, SONG_COUNT_BY_TITLE[group_num], group_num) )
 				info = crawlRecentInfo( rival_base64, i, cookie, rival_id == crawl_eamu_rival_id )
 				if info == None:
 					logging.error( 'crawl failed.. %d.%d'%(group_num,i) )
