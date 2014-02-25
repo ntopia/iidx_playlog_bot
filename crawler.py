@@ -29,11 +29,15 @@ def requestEAMU( url, method, param={}, header={} ):
 		result_header.update( header )
 
 		attempt_limit = 3
+		res = None
+		c = None
 		for count in xrange(attempt_limit):
 			res, c = http.request( url, method, param_encoded, result_header )
 			if res.status == 503:	# retry
 				continue
-			return res, c
+			else:
+				break
+		return res, c
 
 	except Exception, e:
 		return None, None
