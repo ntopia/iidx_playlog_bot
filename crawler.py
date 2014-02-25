@@ -28,7 +28,13 @@ def requestEAMU( url, method, param={}, header={} ):
 							'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.107 Safari/537.36' }
 		result_header.update( header )
 
-		return http.request( url, method, param_encoded, result_header )
+		attempt_limit = 3
+		for count in xrange(attempt_limit):
+			res, c = http.request( url, method, param_encoded, result_header )
+			if res.status == 503:	# retry
+				continue
+			return res, c
+
 	except Exception, e:
 		return None, None
 
