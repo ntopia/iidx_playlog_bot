@@ -36,7 +36,7 @@ def makeUpdateLog( play_log, account, music_info ):
 
 	lv_str = ''
 	if music_info is not None:
-		lv_str = '(lv.%d)' % music_info['lv'][difficulty]
+		lv_str = '(lv.%d)' % music_info['lv']
 
 	out = u'[%s] \u0002%s\u000f %s%s%s \u0002|\u000f ' % ( account['djname'], play_log['title'], PLAYSIDE_STR[play_log['play_side']], DIFFICULTY_STR[difficulty], lv_str )
 
@@ -84,14 +84,17 @@ class IIDXBot( BufferingBot ):
 	#	logging.info( 'iterating...%d' % int(time.time()) )
 
 		r = getRedis()
-		play_log_json = r.lpop( PLAY_LOG_KEY )
+		play_log_json = r.lindex( PLAY_LOG_KEY, 0 )
 		while play_log_json is not None:
 			play_log = json.loads( play_log_json )
 			account = json.loads( r.hget( 'accounts', play_log['rival_id'] ) )
 
 			music_info = None
-			if r.hexists( 'music_info', play_log['title'] ):
-				music_info = json.loads( r.hget( 'music_info', play_log['title'] ) )
+			if 'difficulty' in play_log:
+				music_db = getRedis(4)
+				music_key = '%d.%d.%s'%(play_log['play_side'], play_log['difficulty'], play_log['title'])
+				if music_db.hexists( 'song_info', music_key ):
+					music_info = json.loads( music_db.hget( 'song_info', music_key ) )
 
 			out = makeUpdateLog( play_log, account, music_info )
 			if out is None:
@@ -101,7 +104,8 @@ class IIDXBot( BufferingBot ):
 				message = Message( 'privmsg', ( chan, out ), timestamp = time.time() )
 				self.push_message( message )
 
-			play_log_json = r.lpop( PLAY_LOG_KEY )
+			r.lpop( PLAY_LOG_KEY )
+			play_log_json = r.lindex( PLAY_LOG_KEY, 0 )
 
 		self.ircobj.execute_delayed( 37, self._iter_func )
 
