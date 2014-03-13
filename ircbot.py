@@ -44,12 +44,14 @@ def makeUpdateLog( play_log, account, music_info ):
 	history_a = play_log['after']
 
 	if history_b['clear'] < history_a['clear']:
-		out += u'%s%s\u000f -> ' % ( CLEAR_COLOR[ history_b['clear'] ], CLEAR_SHORTSTR[ history_b['clear'] ] )
+		out += u'%s%s\u000f->' % ( CLEAR_COLOR[ history_b['clear'] ], CLEAR_SHORTSTR[ history_b['clear'] ] )
 	out += u'%s%s\u000f \u0002|\u000f ' % ( CLEAR_COLOR[ history_a['clear'] ], CLEAR_SHORTSTR[ history_a['clear'] ] )
 
+	out += u'\u0002%d/%s\u000f' % ( history_a['score'], GRADE_STR[ history_a['grade'] ] )
 	if history_b['score'] < history_a['score']:
-		out += u'%d/%s -> ' % ( history_b['score'], GRADE_STR[ history_b['grade'] ] )
-	out += u'\u0002%d/%s\u000f \u0002|\u000f ' % ( history_a['score'], GRADE_STR[ history_a['grade'] ] )
+		diff = history_a['score'] - history_b['score']
+		out += u' (+%d)' % diff
+	out += u' \u0002|\u000f '
 
 	bp_str_b = 'X' if history_b['bp'] == BP_INF else str(history_b['bp'])
 	bp_str_a = 'X' if history_a['bp'] == BP_INF else str(history_a['bp'])
