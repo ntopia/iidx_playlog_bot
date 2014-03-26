@@ -51,4 +51,4 @@ def isHistoryUpgraded( before, after ):
 				return True
 	return False
 
-SONG_COUNT_BY_TITLE = [ 175, 113, 81, 101, 180, 54, 120 ]
+SONG_COUNT_BY_TITLE = [ 176, 113, 81, 101, 181, 54, 121 ]
