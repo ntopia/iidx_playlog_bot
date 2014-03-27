@@ -15,8 +15,8 @@ from iidx_util import *
 from config import *
 
 
-def getRedis():
-	return redis.Redis( db=9 )
+def getRedis(db_num=9):
+	return redis.Redis( db=db_num )
 
 
 def requestEAMU( url, method, param={}, header={} ):
