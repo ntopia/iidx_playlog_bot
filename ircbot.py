@@ -94,7 +94,10 @@ class IIDXBot( BufferingBot ):
 			music_info = None
 			if 'difficulty' in play_log:
 				music_db = getRedis(4)
-				music_key = '%d.%d.%s'%(play_log['play_side'], play_log['difficulty'], play_log['title'])
+				title = play_log['title']
+				if music_db.hexists( 'title_set', title ):
+					title = music_db.hget( 'title_set', title )
+				music_key = '%d.%d.%s'%(play_log['play_side'], play_log['difficulty'], title)
 				if music_db.hexists( 'song_info', music_key ):
 					music_info = json.loads( music_db.hget( 'song_info', music_key ) )
 
