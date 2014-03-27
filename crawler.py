@@ -33,7 +33,7 @@ def requestEAMU( url, method, param={}, header={} ):
 		c = None
 		for count in xrange(attempt_limit):
 			res, c = http.request( url, method, param_encoded, result_header )
-			if res.status == 503:	# retry
+			if res.status == 503 or res.status == 500 or res.status == 404:	# retry
 				continue
 			else:
 				break
