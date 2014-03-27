@@ -28,7 +28,7 @@ def requestEAMU( url, method, param={}, header={} ):
 							'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/32.0.1700.107 Safari/537.36' }
 		result_header.update( header )
 
-		attempt_limit = 3
+		attempt_limit = 7
 		res = None
 		c = None
 		for count in xrange(attempt_limit):
