@@ -100,6 +100,10 @@ def crawlRecentInfo( rival_base64, page_idx, cookie, is_admin_data ):
 
 		music_title = c.find( name='div', attrs={ 'class': 'music_info_td' } ).contents[0].strip()
 
+		except_dic = { '&MC;': '&MC', '&Co.;': '&Co.', '&Marmalade;': '&Marmalade' }
+		for k, v in except_dic.iteritems():
+			music_title = music_title.replace( k, v )
+
 		play_count_str_sp = ''#c.find( name='div', attrs={ 'class': 'musi_info_title_box' } ).find( 'p' ).string
 		play_count_sp = 0#int( re.search( '[0-9]+', play_count_str_sp ).group() )
 		play_count_dp = 0
